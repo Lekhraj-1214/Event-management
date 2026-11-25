@@ -7,6 +7,7 @@
  * - 15 events across cities and time zones, in every state: published, nearly full,
  *   sold out, draft, canceled and already finished
  */
+import 'dotenv/config'; // load server/.env (the seed runs outside the API process)
 import { PrismaClient, type EventStatus, type RegistrationStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { DateTime } from 'luxon';

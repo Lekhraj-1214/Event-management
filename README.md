@@ -25,32 +25,88 @@ Organizers create and manage events. Attendees discover them, register, and canc
 ## 1. Setup and running
 
 ### Prerequisites
-- Node.js 20+ (built and tested on Node 24)
-- PostgreSQL 14+ — either Docker (recommended) or a local install
+- **Node.js 20+** and npm (built and tested on Node 24). Check with `node -v`.
+- **PostgreSQL 14+**, from either:
+  - **Docker Desktop** (recommended, nothing else to install). It must be running before step 2.
+  - **A local Postgres install** (Homebrew, Postgres.app, or the Windows/Linux installer). See [Option B](#option-b-use-a-postgres-you-already-have).
+- **An internet connection** in the browser: the Roboto font and event photos (Unsplash) are loaded from the web.
 
-### Steps
+### Option A: Docker (recommended)
 
 ```bash
-# 1. Install dependencies (npm workspaces: installs server + web)
-npm install
+# 1. Get the code
+git clone https://github.com/Lekhraj-1214/Event-management.git
+cd Event-management
 
-# 2. Start Postgres (creates the `eventapp` and `eventapp_test` databases)
+# 2. Start Postgres in Docker (creates the `eventapp` and `eventapp_test` databases)
 docker compose up -d
 
-# 3. Configure environment
+# 3. Install dependencies (npm workspaces install both server/ and web/)
+npm install
+
+# 4. Create the env files from the examples (the defaults match docker-compose)
 cp server/.env.example server/.env
 cp server/.env.test.example server/.env.test
 
-# 4. Apply migrations and seed demo data
+# 5. Create the tables and load the demo data
 npm run db:setup
 
-# 5. Run API (http://localhost:4000) + web (http://localhost:5173)
+# 6. Start the API and the web app together
 npm run dev
 ```
 
-Open **http://localhost:5173**. The Vite dev server proxies `/api` to the Express server, so you don't need any CORS setup in dev.
+Open **http://localhost:5173** and click one of the demo-account buttons on the login page.
 
-> **Using your own Postgres instead of Docker?** Create two databases (`eventapp`, `eventapp_test`) and update `DATABASE_URL` in `server/.env` and `server/.env.test`.
+| What                 | URL                                |
+|----------------------|------------------------------------|
+| Web app              | http://localhost:5173              |
+| API                  | http://localhost:4000/api          |
+| API health check     | http://localhost:4000/api/health   |
+
+The Vite dev server forwards `/api` requests to the Express server, so the browser only talks to one origin and no CORS setup is needed in dev.
+
+> **Port 5432 already in use?** (common if Postgres is also installed locally) Start Docker's Postgres on another port, and point the env files at it:
+> ```bash
+> DB_PORT=5433 docker compose up -d
+> ```
+> Then use `localhost:5433` instead of `localhost:5432` in `DATABASE_URL` in both `server/.env` and `server/.env.test`.
+
+### Option B: Use a Postgres you already have
+
+Create the two databases, then follow Option A from step 3:
+
+```bash
+createdb eventapp
+createdb eventapp_test
+```
+
+In `server/.env` and `server/.env.test`, set `DATABASE_URL` to match your server:
+
+```
+postgresql://<user>:<password>@localhost:<port>/eventapp        # server/.env
+postgresql://<user>:<password>@localhost:<port>/eventapp_test   # server/.env.test
+```
+
+For a default Homebrew install that's usually `postgresql://<your-mac-username>@localhost:5432/eventapp` (no password).
+
+### Stopping and starting again
+
+- **Stop the app:** press `Ctrl + C` in the terminal running `npm run dev`. This frees ports 5173 and 4000.
+- **Stop the database:** `docker compose stop`. Data is kept in a Docker volume.
+- **Start again later:** `docker compose start`, then `npm run dev`. No need to repeat setup.
+- **Reset the demo data:** `npm run db:seed -w server`.
+- **Remove everything, including the database volume:** `docker compose down -v`.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Missing required environment variable JWT_SECRET` | You skipped step 4. Copy the `.env.example` files. |
+| `Can't reach database server at localhost:5432` | Postgres isn't running (`docker compose ps`), or it's on a different port than `DATABASE_URL` says. |
+| `port is already allocated` from Docker | Another Postgres is using 5432. Use `DB_PORT=5433` (see above). |
+| `EADDRINUSE` on 4000 or 5173 | Something is already using the port. Find it with `lsof -i :4000` and stop it, or set `API_PORT` in `server/.env`. |
+| Login says the email or password is wrong | The demo data isn't loaded. Run `npm run db:setup`. |
+| Event photos don't show | No internet connection. The app still works and shows placeholders. |
 
 ### Environment variables (`server/.env`)
 
@@ -79,15 +135,17 @@ All accounts use the password **`password123`**. The login page also has one-cli
 | Attendee  | `erin@example.com`  | One active and one canceled registration                                         |
 | Attendee  | `farah@example.com`, `gautam@example.com` | No registrations: clean accounts for trying the flow     |
 
-The seed also creates **240 generated attendees** and about **1,000 registrations** spread over the past few weeks, so capacity bars, attendee lists and dashboards look like a real product. Events span 9 cities and time zones (Bengaluru, London, Berlin, New York, San Francisco, Lisbon, Sydney, Singapore, Pune).
+The seed also creates **240 generated attendees** and about **1,000 registrations** spread over the past few weeks, so capacity bars, attendee lists and dashboards look like a real product. Events span 10 cities across 8 time zones (Bengaluru, Mumbai, Pune, London, Berlin, Lisbon, New York, San Francisco, Sydney, Singapore), plus one online event.
 
 Re-run `npm run db:seed -w server` at any time to reset to this state.
 
 ### Tests
 
 ```bash
-npm test            # applies migrations to eventapp_test, then runs Vitest
+npm test            # applies migrations to eventapp_test, then runs all 44 API tests
 ```
+
+Tests need Postgres running and `server/.env.test` in place (steps 2 and 4). They use the separate `eventapp_test` database and empty its tables between tests, so your demo data is never touched.
 
 ### Other scripts
 
