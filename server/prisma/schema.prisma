@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ORGANIZER
+  ATTENDEE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELED
+}
+
+enum RegistrationStatus {
+  ACTIVE
+  CANCELED
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          Role
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  events        Event[]
+  registrations Registration[]
+}
+
+model Event {
+  id            String         @id @default(uuid()) @db.Uuid
+  organizerId   String         @db.Uuid
+  organizer     User           @relation(fields: [organizerId], references: [id])
+  title         String
+  description   String
+  /// Absolute instant (stored as UTC). Display uses `timezone`.
+  startsAt      DateTime       @db.Timestamptz(3)
+  endsAt        DateTime?      @db.Timestamptz(3)
+  /// IANA time zone of the venue, e.g. "Asia/Kolkata"
+  timezone      String
+  venue         String
+  /// Optional cover photo (https URL). The UI falls back to a stock photo.
+  imageUrl      String?
+  capacity      Int
+  status        EventStatus    @default(DRAFT)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
+  registrations Registration[]
+
+  @@index([status, startsAt])
+  @@index([organizerId])
+}
+
+model Registration {
+  id         String             @id @default(uuid()) @db.Uuid
+  eventId    String             @db.Uuid
+  event      Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId     String             @db.Uuid
+  user       User               @relation(fields: [userId], references: [id])
+  status     RegistrationStatus @default(ACTIVE)
+  createdAt  DateTime           @default(now()) @db.Timestamptz(3)
+  canceledAt DateTime?          @db.Timestamptz(3)
+
+  // NOTE: a partial unique index on (eventId, userId) WHERE status = 'ACTIVE'
+  // is added in a raw SQL migration (Prisma can't express partial indexes).
+  @@index([eventId, status])
+  @@index([userId, status])
+}
