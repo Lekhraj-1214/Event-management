@@ -208,7 +208,7 @@ Every error is `{ error: { code, message, details? } }`, with a stable `code` (e
 - httpOnly cookie auth, rate limiting, audit log, structured logging and request IDs, OpenAPI docs.
 - CSV export of attendee lists.
 
-## 6. Demo walkthrough (for the video)
+## 6. Demo walkthrough
 
 1. Listing page: only published, upcoming events are shown (the draft and canceled seeds are hidden). Show search and the places-left meters.
 2. Sign in as **Farah** (a clean account) → open *Intimate Jazz Night* (1 seat) → Register → success toast, event shows **Full**, and times appear in New York time and in your local time.
@@ -219,6 +219,4 @@ Every error is `{ error: { code, message, details? } }`, with a stable `code` (e
 7. Create a new event (show validation and the time-zone picker) → publish → cancel it.
 8. Run `npm test`.
 
-## 7. AI usage
 
-> _Fill this in honestly in your own words. For example: which parts you generated with an AI assistant, which you wrote or rewrote yourself, and how you checked the result (reading every file, running the tests, the lock-removal experiment, manual testing in the browser)._
